@@ -1,0 +1,458 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  username  String   @unique
+  password  String
+  email     String   @unique
+  name      String
+  role      String   @default("ADMIN") // This is correct
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model Resident {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String
+  apartment              String                @unique
+  phone                  String
+  email                  String                @unique
+  status                 String                @default("Active")
+  joinDate               DateTime              @default(now())
+  familyMembers          Int                   @default(1)
+  username               String?               @unique
+  password               String?
+  approvalStatus         ApprovalStatus        @default(PENDING)
+  appliedDate            DateTime              @default(now())
+
+  // KYC Information
+  cnicNumber             String?
+  passportNumber         String?
+  driverLicenseNumber    String?
+  idDocumentType         IdDocumentType        @default(CNIC)
+  ownershipType          OwnershipType         @default(OWNER)
+  emergencyContact       String?
+  emergencyContactPhone  String?
+  occupation             String?
+  workAddress            String?
+  profilePhoto           String?               // Base64 encoded
+  monthlyIncome          Float?
+  previousAddress        String?
+  reference1Name         String?
+  reference1Phone        String?
+  reference2Name         String?
+  reference2Phone        String?
+  additionalNotes        String?
+
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  // Relations
+  vehicles               Vehicle[]
+  complaints             Complaint[]
+  serviceBookings        ServiceBooking[]
+  serviceReviews         ServiceReview[]
+  maintenanceBills       MaintenanceBill[]
+  gateEntries            GateEntry[]
+  guests                 Guest[]
+  deliveries             Delivery[]
+
+  @@map("residents")
+}
+
+model ServiceProvider {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  username          String             @unique
+  email             String             @unique
+  phone             String
+  password          String
+
+  // KYC Information
+  idDocumentType    IdDocumentType     @default(CNIC)
+  cnicNumber        String?
+  passportNumber    String?
+  driverLicenseNumber String?
+
+  // Service Information
+  serviceCategory   String
+  keywords          String
+  shortIntro        String
+  experience        String
+  previousWork      String
+  certifications    String
+  availability      String
+  serviceArea       String
+  profilePhoto      String?
+  additionalNotes   String
+
+  registrationDate  DateTime           @default(now())
+  status            ServiceProviderStatus @default(PENDING)
+  rating            Float?             @default(0)
+  totalReviews      Int                @default(0)
+  completedJobs     Int                @default(0)
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relations
+  vehicles          ServiceProviderVehicle[]
+  serviceBookings   ServiceBooking[]
+  serviceReviews    ServiceReview[]
+
+  @@map("service_providers")
+}
+
+model Employee {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId            String           @unique
+  name                  String
+  designation           String
+  department            String
+  email                 String           @unique
+  phone                 String
+  address               String
+
+  // KYC Information
+  idDocumentType        IdDocumentType   @default(CNIC)
+  cnicNumber            String?
+  passportNumber        String?
+  driverLicenseNumber   String?
+
+  emergencyContact      String
+  emergencyContactPhone String
+  joiningDate           DateTime
+  status                EmployeeStatus   @default(ACTIVE)
+
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@map("employees")
+}
+
+model Vehicle {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  vehicleType      VehicleType
+  make             String
+  model            String
+  year             Int
+  color            String
+  licensePlate     String         @unique
+  registrationDate DateTime       @default(now())
+  qrCode           String
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  resident         Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@map("vehicles")
+}
+
+model ServiceProviderVehicle {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  serviceProviderId String @db.ObjectId
+  vehicleType      VehicleType
+  make             String
+  model            String
+  year             Int
+  color            String
+  licensePlate     String         @unique
+  registrationDate DateTime       @default(now())
+  qrCode           String
+  status           String         @default("Active")
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  serviceProvider  ServiceProvider @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+
+  @@map("service_provider_vehicles")
+}
+
+model Complaint {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  title            String
+  category         String
+  status           ComplaintStatus  @default(OPEN)
+  priority         Priority         @default(MEDIUM)
+  description      String
+  images           String[]         // Array of Base64 encoded images
+  adminResponse    String?
+  responseDate     DateTime?
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  resident         Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@map("complaints")
+}
+
+model ServiceBooking {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  serviceProviderId String @db.ObjectId
+  serviceCategory     String
+  description         String
+  scheduledDate       DateTime
+  scheduledTime       String
+  status              BookingStatus      @default(PENDING)
+  priority            Priority           @default(MEDIUM)
+  estimatedCost       Float?
+  actualCost          Float?
+  notes               String?
+  bookingDate         DateTime           @default(now())
+  completionDate      DateTime?
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  // Relations
+  resident            Resident           @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  serviceProvider     ServiceProvider    @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  review              ServiceReview?
+
+  @@map("service_bookings")
+}
+
+model ServiceReview {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId        String   @db.ObjectId              @unique
+  residentId      String   @db.ObjectId
+  serviceProviderId String @db.ObjectId
+  rating             Int              // 1-5 stars
+  review             String
+  reviewDate         DateTime         @default(now())
+  serviceCategory    String
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  booking            ServiceBooking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  resident           Resident         @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  serviceProvider    ServiceProvider  @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+
+  @@map("service_reviews")
+}
+
+model MaintenanceBill {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  month          String
+  year           Int
+  amount         Float
+  dueDate        DateTime
+  status         BillStatus     @default(PENDING)
+  generatedDate  DateTime       @default(now())
+  paidDate       DateTime?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  resident       Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  items          BillItem[]
+
+  @@map("maintenance_bills")
+}
+
+model BillItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  maintenanceBillId String @db.ObjectId
+  description      String
+  amount           Float
+  type             BillItemType     @default(FIXED)
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  maintenanceBill  MaintenanceBill  @relation(fields: [maintenanceBillId], references: [id], onDelete: Cascade)
+
+  @@map("bill_items")
+}
+
+model GateEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        EntryType   @default(ENTRY)
+  person      String
+  apartment   String
+  entryType   String      // Resident, Guest, Delivery, Service Provider, etc.
+  vehicle     String      @default("None")
+  gate        String      @default("Main Gate")
+  method      String      @default("Manual")
+  residentId      String   ?   @db.ObjectId
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  resident    Resident?   @relation(fields: [residentId], references: [id], onDelete: SetNull)
+
+  @@map("gate_entries")
+}
+
+model Guest {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  guestName          String
+  purpose            String
+  visitDate          DateTime
+  timeFrom           String
+  timeTo             String
+  vehicleType        String?
+  licensePlate       String?
+  idNumber           String
+  idType             IdDocumentType @default(CNIC)
+  phone              String
+  qrCode             String
+  status             GuestStatus @default(ACTIVE)
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  resident           Resident    @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@map("guests")
+}
+
+model Delivery {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String   @db.ObjectId
+  riderName        String
+  idNumber         String
+  idType           IdDocumentType @default(CNIC)
+  companyName      String
+  description      String
+  qrCode           String
+  status           DeliveryStatus @default(ACTIVE)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  resident         Resident       @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@map("deliveries")
+}
+
+model Announcement {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  type        String
+  priority    Priority        @default(MEDIUM)
+  description String
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("announcements")
+}
+
+// Enums
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum IdDocumentType {
+  CNIC
+  PASSPORT
+  DRIVER_LICENSE
+}
+
+enum OwnershipType {
+  OWNER
+  TENANT
+}
+
+enum ServiceProviderStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VehicleType {
+  CAR
+  BIKE
+  SCOOTER
+  TRUCK
+  MOTORCYCLE
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum BillItemType {
+  FIXED
+  VARIABLE
+  ONE_TIME
+}
+
+enum EntryType {
+  ENTRY
+  EXIT
+}
+
+enum GuestStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
