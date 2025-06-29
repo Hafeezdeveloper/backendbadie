@@ -90,6 +90,205 @@ router.get(
     }
   },
 );
+// Add complaint with voice note
+// Add complaint with voice note
+router.post(
+  "/complaints",
+  authenticateAndVerify,
+  requireAdminOrResident,
+  async (req: AuthRequest, res) => {
+    try {
+      const { title, category, description, priority, images, voiceNote, compalainText } = req.body;
+      const residentId = req.user!.id;
+      console.log(req.user.id)
+      // Validate input
+      if (!title || !category || !description) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Title, category, and description are required"
+        });
+      }
+
+      // Create complaint - using UserComplaint model
+      const complaint = await prisma.userComplaint.create({
+        data: {
+          title,
+          category,
+          description,
+          priority: priority ? priority.toLowerCase() : "medium",
+          complaintText: compalainText || "",
+          status: "open",
+          residentId: residentId // Directly provide the ID
+        },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          status: true,
+          complaintText: true,
+          priority: true,
+          createdAt: true,
+          residentId: true,
+          updatedAt: true
+        }
+      });
+
+      res.status(201).json({
+        message: "Complaint submitted successfully",
+        complaint
+      });
+    } catch (error) {
+      console.error("Create complaint error:", error);
+      res.status(500).json({
+        error: "Failed to submit complaint",
+        message: error instanceof Error ? error.message : "Internal server error"
+      });
+    }
+  }
+);
+router.post(
+  "/complaints",
+  authenticateAndVerify,
+  requireAdminOrResident,
+  async (req: AuthRequest, res) => {
+    try {
+      const { title, category, description, priority, images, voiceNote, complaintText } = req.body;
+      const residentId = req.user!.id;
+
+      // Validate input
+      if (!title || !category || !description) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Title, category, and description are required"
+        });
+      }
+
+      // Create complaint
+      const complaint = await prisma.userComplaint.create({
+        data: {
+          title,
+          category,
+          description,
+          priority: priority ? priority.toLowerCase() : "medium",
+          complaintText: complaintText || "",
+          status: "open",
+          residentId: residentId
+        },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          status: true,
+          complaintText: true,
+          priority: true,
+          createdAt: true,
+          residentId: true,
+          updatedAt: true
+        }
+      });
+
+      res.status(201).json({
+        message: "Complaint submitted successfully",
+        complaint
+      });
+    } catch (error) {
+      console.error("Create complaint error:", error);
+      res.status(500).json({
+        error: "Failed to submit complaint",
+        message: error instanceof Error ? error.message : "Internal server error"
+      });
+    }
+  }
+);
+
+// GET - Fetch complaints (with filters and pagination)
+router.get(
+  "/complaints/all",
+  authenticateAndVerify,
+  requireAdminOrResident,
+  async (req: AuthRequest, res) => {
+    try {
+      const { search, status, category, page = 1, limit = 10 } = req.query;
+      const skip = (Number(page) - 1) * Number(limit);
+
+      // Build where clause
+      const where: any = {};
+      if (search) {
+        where.OR = [
+          { title: { contains: search as string, mode: "insensitive" } },
+          { description: { contains: search as string, mode: "insensitive" } },
+          { complaintText: { contains: search as string, mode: "insensitive" } }
+        ];
+      }
+      if (status) {
+        where.status = status;
+      }
+      if (category) {
+        where.category = category;
+      }
+
+      const [complaints, total] = await Promise.all([
+        prisma.userComplaint.findMany({
+          where,
+          skip,
+          take: Number(limit),
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            status: true,
+            complaintText: true,
+            description: true,
+            priority: true,
+            createdAt: true,
+            updatedAt: true,
+            residentId: true, // We’ll use this to manually fetch resident info
+          }
+        }),
+        prisma.userComplaint.count({ where })
+      ]);
+
+      // Get all unique residentIds from the complaints
+      const residentIds = [...new Set(complaints.map(c => c.residentId))];
+
+      // Fetch resident data in one go
+      const residents = await prisma.resident.findMany({
+        where: { id: { in: residentIds } },
+        select: {
+          id: true,
+          name: true,
+          apartment: true,
+        }
+      });
+
+      // Attach resident info manually
+      const complaintsWithResident = complaints.map(complaint => {
+        const resident = residents.find(r => r.id === complaint.residentId);
+        return {
+          ...complaint,
+          resident: resident || null
+        };
+      });
+
+      res.json({
+        complaints: complaintsWithResident,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        }
+      });
+    } catch (error) {
+      console.error("Get complaints error:", error);
+      res.status(500).json({
+        error: "Failed to fetch complaints",
+        message: error instanceof Error ? error.message : "Internal server error"
+      });
+    }
+  }
+);
 
 // Get resident by ID
 router.get(

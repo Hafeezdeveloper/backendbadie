@@ -13,7 +13,7 @@ datasource db {
 model Admin {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   username  String   @unique
-  password  String
+  password  String  
   email     String   @unique
   name      String
   status    Boolean  @default(true) // ✅ Make sure this line exists
@@ -71,6 +71,40 @@ model Resident {
   deliveries             Delivery[]
 
   @@map("residents")
+}
+
+
+
+enum ComplaintStatusnew {
+  open
+  inprogress
+  resolved
+  closed
+}
+
+enum Prioritynew {
+  low
+  medium
+  high
+}
+
+
+model UserComplaint {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  residentId      String     @db.ObjectId
+  title           String
+  category        String
+ status       ComplaintStatusnew 
+  priority      Prioritynew 
+  description     String
+  complaintText   String         // New field for complaint text (fixed spelling)
+  adminResponse   String?
+  responseDate    DateTime?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("usercomplaints")
 }
 
 model ServiceProvider {
@@ -410,6 +444,7 @@ enum VehicleType {
 
 enum ComplaintStatus {
   OPEN
+  open
   IN_PROGRESS
   RESOLVED
   CLOSED
@@ -426,6 +461,7 @@ enum BookingStatus {
 enum Priority {
   LOW
   MEDIUM
+  medium
   HIGH
 }
 
