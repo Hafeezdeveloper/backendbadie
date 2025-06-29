@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../server.js";
 import { verifyToken } from "../lib/auth.js";
+import { ObjectId } from "mongodb";
 
 export interface AuthRequest extends Request {
   user?: {
@@ -52,22 +53,25 @@ export const verifyUserExists = async (
 
     const { id, type } = req.user;
     let user = null;
-
+    console.log(req.user)
     switch (type) {
       case "admin":
-        user = await prisma.admin.findUnique({ 
-          where: { id },
-          select: { id: true, status: true }
+        user = await prisma.admin.findUnique({
+          where: { id: new ObjectId(id) }, // ✅ correct ObjectId format
+          select: {
+            id: true,
+            status: true, // ✅ Only works if schema includes this
+          }
         });
         break;
-      
+
       case "resident":
         user = await prisma.resident.findUnique({
           where: { id },
-          select: { 
-            id: true, 
-            status: true, 
-            approvalStatus: true 
+          select: {
+            id: true,
+            status: true,
+            approvalStatus: true
           },
         });
         if (user && (user.status !== "Active" || user.approvalStatus !== "APPROVED")) {
@@ -77,13 +81,13 @@ export const verifyUserExists = async (
           });
         }
         break;
-      
+
       case "serviceProvider":
         user = await prisma.serviceProvider.findUnique({
           where: { id },
-          select: { 
-            id: true, 
-            status: true 
+          select: {
+            id: true,
+            status: true
           },
         });
         if (user && user.status !== "ACTIVE") {
@@ -93,13 +97,13 @@ export const verifyUserExists = async (
           });
         }
         break;
-      
+
       case "employee":
         user = await prisma.employee.findUnique({
           where: { id },
-          select: { 
-            id: true, 
-            status: true 
+          select: {
+            id: true,
+            status: true
           },
         });
         if (user && user.status !== "ACTIVE") {
@@ -109,7 +113,7 @@ export const verifyUserExists = async (
           });
         }
         break;
-      
+
       default:
         return res.status(403).json({
           error: "Invalid user type",

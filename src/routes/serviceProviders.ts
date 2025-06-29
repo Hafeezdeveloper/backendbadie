@@ -178,8 +178,6 @@ router.get("/:id", authenticateAndVerify, async (req: AuthRequest, res) => {
 // Update service provider
 router.patch(
   "/:id",
-  authenticateAndVerify,
-  requireAdminOrServiceProvider,
   async (req: AuthRequest, res) => {
     try {
       const serviceProviderId = req.params.id;

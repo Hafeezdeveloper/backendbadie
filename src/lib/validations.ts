@@ -76,14 +76,14 @@ export const ServiceProviderRegistrationSchema = z.object({
   driverLicenseNumber: z.string().optional(),
 
   // Service fields
-  serviceCategory: z.string().min(1, "Service category is required"),
-  keywords: z.string().min(1, "Keywords are required"),
-  shortIntro: z.string().min(10, "Short intro must be at least 10 characters"),
-  experience: z.string().min(1, "Experience is required"),
+  serviceCategory: z.string(),
+  keywords: z.string(),
+  shortIntro: z.string(),
+  experience: z.string(),
   previousWork: z.string().optional(),
   certifications: z.string().optional(),
-  availability: z.string().min(1, "Availability is required"),
-  serviceArea: z.string().min(1, "Service area is required"),
+  availability: z.string(),
+  serviceArea: z.string(),
   profilePhoto: z.string().optional(),
   additionalNotes: z.string().optional(),
 });

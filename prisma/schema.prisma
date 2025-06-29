@@ -16,6 +16,7 @@ model Admin {
   password  String
   email     String   @unique
   name      String
+  status    Boolean  @default(true) // ✅ Make sure this line exists
   role      String   @default("ADMIN") // This is correct
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

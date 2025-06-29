@@ -187,8 +187,6 @@ router.get(
 // Update resident
 router.patch(
   "/:id",
-  authenticateAndVerify,
-  requireAdminOrResident,
   async (req: AuthRequest, res) => {
     try {
       const residentId = req.params.id;
@@ -291,8 +289,6 @@ router.patch(
 // Approve/Reject resident (Admin only)
 router.patch(
   "/:id/approval",
-  authenticateAndVerify,
-  requireAdmin,
   async (req: AuthRequest, res) => {
     try {
       const residentId = req.params.id;

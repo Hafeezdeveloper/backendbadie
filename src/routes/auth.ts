@@ -77,7 +77,7 @@ router.post("/resident/login", async (req, res) => {
         message: "Email or password is incorrect",
       });
     }
-
+    console.log(resident.status)
     if (resident.status !== "Active") {
       return res.status(403).json({
         error: "Account inactive",
@@ -101,15 +101,7 @@ router.post("/resident/login", async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: {
-        id: resident.id,
-        name: resident.name,
-        email: resident.email,
-        apartment: resident.apartment,
-        type: "resident",
-        status: resident.status,
-        approvalStatus: resident.approvalStatus,
-      },
+      user: resident
     });
   } catch (error) {
     console.error("Resident login error:", error);
@@ -131,6 +123,7 @@ router.post("/resident/register", async (req, res) => {
         OR: [
           { email: validatedData.email },
           { apartment: validatedData.apartment },
+          { username: validatedData.username ?? "" }, // Add this line
         ],
       },
     });
@@ -216,15 +209,7 @@ router.post("/service-provider/login", async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: {
-        id: serviceProvider.id,
-        name: serviceProvider.name,
-        email: serviceProvider.email,
-        username: serviceProvider.username,
-        type: "serviceProvider",
-        status: serviceProvider.status,
-        serviceCategory: serviceProvider.serviceCategory,
-      },
+      user: serviceProvider
     });
   } catch (error) {
     console.error("Service provider login error:", error);
